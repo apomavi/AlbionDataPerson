@@ -117,9 +117,11 @@ func getAfmCategory(shopCat, subCat, uniqueName string) (string, string) {
 	return "Other", ""
 }
 
-// BÜYÜK DÜZELTME: Asla çökmeyen Struct yapısı ve @ tuzağını aşan özel etiketler!
+// ZIRHLI YAPI: Hem eski hem yeni etiketleri tanır
 type AOItem struct {
 	UniqueName         string            `json:"UniqueName"`
+	UniqueNameAlt1     string            `json:"@uniquename"`
+	UniqueNameAlt2     string            `json:"@UniqueName"`
 	Index              interface{}       `json:"Index"`
 	LocalizedNames     map[string]string `json:"LocalizedNames"`
 	ShopCategory       string            `json:"shopCategory"`
@@ -129,9 +131,12 @@ type AOItem struct {
 }
 
 func LoadDictionary() {
-	fmt.Println("📚 AFM Tarzı Kusursuz Eşya Sözlüğü İndiriliyor...")
+	fmt.Println("📚 AFM Tarzı Zırhlı Eşya Sözlüğü İndiriliyor...")
+
+	// Sağlam ve orijinal Github adresi (JSON hatası vermeyen adres)
 	resp, err := http.Get("https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json")
 	if err != nil {
+		fmt.Println("❌ Sözlük İndirme Hatası:", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -139,21 +144,31 @@ func LoadDictionary() {
 	var items []AOItem
 	if err := json.NewDecoder(resp.Body).Decode(&items); err == nil {
 		for _, item := range items {
-			if item.UniqueName == "" {
+
+			uName := item.UniqueName
+			if uName == "" {
+				uName = item.UniqueNameAlt1
+			}
+			if uName == "" {
+				uName = item.UniqueNameAlt2
+			}
+			if uName == "" {
 				continue
 			}
 
-			idxStr := fmt.Sprintf("%v", item.Index)
-			ItemNameToId[item.UniqueName] = idxStr
-			IdToItemName[idxStr] = item.UniqueName
-
-			realName := item.UniqueName
+			// 🚨 KRİTİK FİLTRE: Gerçek oyuncu eşyası mı? (İngilizce ismi var mı?)
+			realName := uName
 			if item.LocalizedNames != nil && item.LocalizedNames["EN-US"] != "" {
 				realName = item.LocalizedNames["EN-US"]
+			} else {
+				continue // İsmi yoksa bu bir yetenek veya kod parçasıdır, sil gitsin!
 			}
-			ItemRealNames[item.UniqueName] = realName
 
-			// @ Tuzağını okuma
+			idxStr := fmt.Sprintf("%v", item.Index)
+			ItemNameToId[uName] = idxStr
+			IdToItemName[idxStr] = uName
+			ItemRealNames[uName] = realName
+
 			shopCat := item.ShopCategory
 			if shopCat == "" {
 				shopCat = item.ShopCategoryAlt
@@ -162,20 +177,39 @@ func LoadDictionary() {
 			if subCat == "" {
 				subCat = item.ShopSubCategoryAlt
 			}
-			if shopCat == "" {
-				continue
+
+			cat, sub := getAfmCategory(shopCat, subCat, uName)
+
+			// 🛡️ ZIRHLI KATEGORİ TAHMİN EDİCİ 🛡️
+			// Eğer dışarıdan kategori verisi silinmişse veya boş gelirse, eşyanın kodundan biz buluruz!
+			if cat == "Other" || cat == "" {
+				if strings.Contains(uName, "_MAIN_") || strings.Contains(uName, "_2H_") {
+					cat = "Weapons"
+				} else if strings.Contains(uName, "_HEAD_") {
+					cat = "Head Armor"
+				} else if strings.Contains(uName, "_ARMOR_") {
+					cat = "Chest Armor"
+				} else if strings.Contains(uName, "_SHOES_") {
+					cat = "Foot Armor"
+				} else if strings.Contains(uName, "_BAG") {
+					cat = "Bags"
+				} else if strings.Contains(uName, "_CAPE") {
+					cat = "Capes"
+				} else if strings.Contains(uName, "_OFF_") {
+					cat = "Off-Hands"
+				} else if strings.Contains(uName, "_RING") || strings.Contains(uName, "_NECKLACE") || strings.Contains(uName, "_TRINKET") {
+					cat = "Accessories"
+				}
 			}
 
-			cat, sub := getAfmCategory(shopCat, subCat, item.UniqueName)
-
 			tier := 0
-			if len(item.UniqueName) >= 2 && item.UniqueName[0] == 'T' && item.UniqueName[1] >= '1' && item.UniqueName[1] <= '8' {
-				tier = int(item.UniqueName[1] - '0')
+			if len(uName) >= 2 && uName[0] == 'T' && uName[1] >= '1' && uName[1] <= '8' {
+				tier = int(uName[1] - '0')
 			}
 
 			enchant := 0
-			if idx := strings.Index(item.UniqueName, "@"); idx != -1 && idx+1 < len(item.UniqueName) {
-				enchant = int(item.UniqueName[idx+1] - '0')
+			if idx := strings.Index(uName, "@"); idx != -1 && idx+1 < len(uName) {
+				enchant = int(uName[idx+1] - '0')
 			}
 
 			displayName := fmt.Sprintf("[T%d] %s", tier, realName)
@@ -184,7 +218,7 @@ func LoadDictionary() {
 			}
 
 			ItemList = append(ItemList, ItemInfo{
-				UniqueName:  item.UniqueName,
+				UniqueName:  uName,
 				DisplayName: displayName,
 				Tier:        tier,
 				Enchant:     enchant,
@@ -192,7 +226,7 @@ func LoadDictionary() {
 				SubCategory: sub,
 			})
 		}
-		fmt.Printf("✅ Sözlük Hazır! Tam %d adet eşya yüklendi ve ağaca yerleştirildi.\n", len(ItemList))
+		fmt.Printf("✅ Sözlük Hazır! Tam %d adet GEÇERLİ eşya yüklendi ve Flipper'a bağlandı.\n", len(ItemList))
 	} else {
 		fmt.Println("❌ JSON HATA:", err)
 	}
@@ -202,6 +236,8 @@ func StartWebServer() {
 	LoadDictionary()
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(cors.New())
+
+	SetupFlipperRoutes(app)
 
 	app.Get("/api/items", func(c *fiber.Ctx) error { return c.JSON(ItemList) })
 

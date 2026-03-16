@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Cartel - Black Market Flipper</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #161312; --card-bg: #221f1e; --text-color: #e9e1df;
+            --text-muted: #9c8d89; --primary: #e7bdb1; --primary-dark: #77574d;
+            --profit-color: #2f9e36; --danger-color: #bd3434; --aodp-color: #3275db;
+        }
+
+        body { font-family: 'Roboto', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--primary-dark); padding-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 24px; color: var(--primary); letter-spacing: 2px; }
+
+        .controls-card { background-color: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; border: 1px solid var(--primary-dark); }
+        .control-group { display: flex; flex-direction: column; }
+        .control-group label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .control-group input, .control-group select { background-color: var(--bg-color); color: var(--text-color); border: 1px solid var(--primary-dark); padding: 6px 10px; border-radius: 6px; outline: none; font-size: 13px;}
+        .checkbox-group { display: flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; color: var(--text-muted);}
+        
+        .btn { background-color: var(--primary-dark); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px; transition: 0.3s; }
+        .btn:hover { background-color: var(--primary); color: #161312; }
+        .btn-refresh { background-color: #a23955; }
+        .btn-refresh:hover { background-color: #ffb2bf; }
+
+        .table-container { overflow-x: auto; background-color: var(--card-bg); border-radius: 12px; border: 1px solid var(--primary-dark); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #383433; }
+        
+        th { color: var(--text-muted); font-weight: 500; font-size: 13px; background-color: rgba(0,0,0,0.2); cursor: pointer; user-select: none; white-space: nowrap; }
+        th:hover { color: white; background-color: rgba(255,255,255,0.05); }
+        th .sort-icon { font-size: 14px; vertical-align: middle; opacity: 0.3; transition: 0.2s;}
+        th.active-sort .sort-icon { opacity: 1; color: var(--primary);}
+
+        tr:hover { background-color: rgba(255,255,255,0.05); }
+        .item-info { display: flex; align-items: center; gap: 10px; }
+        .item-img { width: 45px; height: 45px; border-radius: 6px; background: #000; padding: 2px;}
+        .item-name { font-weight: bold; font-size: 14px; }
+        .item-tier { font-size: 11px; color: var(--text-muted); }
+        .price-text { font-weight: bold; font-size: 14px; }
+        .age-text { font-size: 11px; color: var(--danger-color); }
+        .age-fresh { color: var(--profit-color); font-size: 11px;}
+        .profit-text { color: var(--profit-color); font-weight: bold; font-size: 15px; }
+        
+        .badge-local { background-color: rgba(47, 158, 54, 0.2); color: #4caf50; border: 1px solid #4caf50; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;}
+        .badge-aodp { background-color: rgba(50, 117, 219, 0.2); color: #64b5f6; border: 1px solid #64b5f6; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;}
+
+        .btn-consume { background: none; border: 1px solid var(--danger-color); color: var(--danger-color); padding: 4px 8px; border-radius: 6px; cursor: pointer; transition: 0.3s; font-size: 12px; }
+        .btn-consume:hover { background: var(--danger-color); color: white; }
+        .btn-copy { background: none; border: none; color: var(--text-muted); cursor: pointer; padding:0; margin-left: 5px; transition: 0.2s;}
+        .btn-copy:hover { color: white; }
+        .loader { text-align: center; padding: 50px; display: none; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>SHADOW CARTEL - BLACK MARKET</h1>
+    </div>
+
+    <div class="controls-card">
+        <button class="btn btn-refresh" onclick="fetchFlips()">
+            <span class="material-icons">refresh</span> Taramayı Başlat
+        </button>
+
+        <div class="control-group">
+            <label>Tiers</label>
+            <select id="filterTiers" multiple size="2" style="height: 40px; width: 80px;">
+                <option value="4" selected>Tier 4</option>
+                <option value="5" selected>Tier 5</option>
+                <option value="6" selected>Tier 6</option>
+                <option value="7" selected>Tier 7</option>
+                <option value="8" selected>Tier 8</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Min Kar (Premium)</label>
+            <input type="number" id="minProfit" value="5000" step="1000" style="width: 100px;">
+        </div>
+
+        <div class="control-group">
+            <label>Min Kar %</label>
+            <input type="number" id="minProfitPct" value="10" step="1" style="width: 80px;">
+        </div>
+
+        <div class="control-group">
+            <label>Max Alış (dk)</label>
+            <input type="number" id="maxBuyAge" value="60" step="5" style="width: 80px;">
+        </div>
+
+        <div class="control-group">
+            <label>Max Satış (dk)</label>
+            <input type="number" id="maxSellAge" value="120" step="5" style="width: 80px;">
+        </div>
+
+        <div class="control-group">
+            <label>Min Miktar</label>
+            <input type="number" id="minAmount" value="1" step="1" style="width: 80px;">
+        </div>
+
+        <div class="control-group" style="gap: 5px;">
+            <label class="checkbox-group">
+                <input type="checkbox" id="useAODP"> <span class="material-icons" style="font-size: 16px; color:var(--aodp-color);">public</span> AODP Dahil Et
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="showNonPremium" onchange="applyFilters()"> <span class="material-icons" style="font-size: 16px;">money_off</span> Non-Premium
+            </label>
+            <label class="checkbox-group">
+                <input type="checkbox" id="hideConsumed" checked> <span class="material-icons" style="font-size: 16px; color:var(--danger-color);">visibility_off</span> Tüketilenleri Gizle
+            </label>
+        </div>
+    </div>
+
+    <div class="loader" id="loader">
+        <h2><span class="material-icons" style="animation: spin 1s infinite linear;">sync</span> Piyasa Taranıyor, Lütfen Bekleyin...</h2>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortBy('item_name')">Eşya Adı <span class="material-icons sort-icon">swap_vert</span></th>
+                    <th onclick="sortBy('buy_price')">Satın Alınacak <span class="material-icons sort-icon">swap_vert</span></th>
+                    <th onclick="sortBy('sell_price')">Satılacak (BM) <span class="material-icons sort-icon">swap_vert</span></th>
+                    <th onclick="sortBy('profit_premium')" class="active-sort" id="th-profit">Net Kar (Prem) <span class="material-icons sort-icon">arrow_downward</span></th>
+                    <th onclick="sortBy('profit_percentage')">Kar % <span class="material-icons sort-icon">swap_vert</span></th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="flip-results"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let allFlips = []; 
+        let consumedItems = new Set(); 
+        let currentSortCol = 'profit_premium'; // <-- DÜZELTİLDİ
+        let currentSortDesc = true;
+
+        const formatSilver = (num) => new Intl.NumberFormat('en-US').format(num);
+
+        async function fetchFlips() {
+            document.getElementById('flip-results').innerHTML = '';
+            document.getElementById('loader').style.display = 'block';
+            const useAODP = document.getElementById('useAODP').checked;
+
+            try {
+                const response = await fetch(`/api/flipper?use_aodp=${useAODP}`);
+                allFlips = await response.json();
+                document.getElementById('loader').style.display = 'none';
+                applyFilters(); 
+            } catch (error) {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('flip-results').innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Sunucuya bağlanılamadı.</td></tr>';
+            }
+        }
+
+        function applyFilters() {
+            if (!allFlips) return;
+
+            const minProfit = parseInt(document.getElementById('minProfit').value);
+            const minProfitPct = parseFloat(document.getElementById('minProfitPct').value);
+            const maxBuyAge = parseInt(document.getElementById('maxBuyAge').value);
+            const maxSellAge = parseInt(document.getElementById('maxSellAge').value);
+            const minAmount = parseInt(document.getElementById('minAmount').value);
+            const showNonPremium = document.getElementById('showNonPremium').checked;
+            const hideConsumed = document.getElementById('hideConsumed').checked;
+            
+            const tierSelect = document.getElementById('filterTiers');
+            const selectedTiers = Array.from(tierSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+            let filtered = allFlips.filter(f => {
+                if (hideConsumed && consumedItems.has(f.item_id)) return false;
+                if (!selectedTiers.includes(f.tier)) return false;
+                if (f.buy_age_mins > maxBuyAge || f.sell_age_mins > maxSellAge) return false;
+                if (f.buy_amount < minAmount) return false;
+                if (showNonPremium && f.profit_normal < minProfit) return false;
+                if (!showNonPremium && f.profit_premium < minProfit) return false;
+                if (f.profit_percentage < minProfitPct) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                let valA = a[currentSortCol] || a.profit_premium;
+                let valB = b[currentSortCol] || b.profit_premium;
+                if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+                
+                if (valA < valB) return currentSortDesc ? 1 : -1;
+                if (valA > valB) return currentSortDesc ? -1 : 1;
+                return 0;
+            });
+
+            renderTable(filtered, showNonPremium);
+        }
+
+        function renderTable(data, showNonPremium) {
+            const tbody = document.getElementById('flip-results');
+            tbody.innerHTML = '';
+            document.getElementById('th-profit').innerHTML = showNonPremium ? `Net Kar (Non-Prem) <span class="material-icons sort-icon">arrow_downward</span>` : `Net Kar (Prem) <span class="material-icons sort-icon">arrow_downward</span>`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#9c8d89;">Uygun fırsat bulunamadı.</td></tr>';
+                return;
+            }
+
+            const qualityMap = {1: "Normal", 2: "Good", 3: "Outstanding", 4: "Excellent", 5: "Masterpiece"};
+
+            data.forEach((f, index) => {
+                const buyBadge = f.buy_source.includes('LOCAL') ? 'badge-local' : 'badge-aodp';
+                const sellBadge = f.sell_source.includes('LOCAL') ? 'badge-local' : 'badge-aodp';
+                const profitToShow = showNonPremium ? f.profit_normal : f.profit_premium;
+                
+                // 🚨 DÜZELTME: Enchant seviyesini düzgün gösterme (Örn: 5 veya 5.2)
+                const tierDisplay = f.enchant > 0 ? `${f.tier}.${f.enchant}` : `${f.tier}`;
+
+                tbody.innerHTML += `
+                    <tr id="row-${f.item_id}">
+                        <td>
+                            <div class="item-info">
+                                <img class="item-img" src="https://render.albiononline.com/v1/item/${f.item_id}.png?quality=${f.quality}&size=100">
+                                <div>
+                                    <div class="item-name">${f.item_name} <button class="btn-copy" onclick="copyItemName(this)" data-name="${f.item_name}" title="Kopyala"><span class="material-icons" style="font-size:14px;">content_copy</span></button></div>
+                                    <div class="item-tier">Tier: ${tierDisplay} | Kalite: ${qualityMap[f.quality] || "Bilinmiyor"}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="color:var(--text-muted); font-size:12px;">${f.buy_from_location} <span class="${buyBadge}">${f.buy_source.replace('🛡️','').replace('🌐','')}</span></div>
+                            <div class="price-text">${formatSilver(f.buy_price)} 🥈</div>
+                            <div class="${f.buy_age_mins <= 15 ? 'age-fresh' : 'age-text'}">Adet: <b style="color:#fff;">${f.buy_amount}</b> | ${f.buy_age_mins} dk önce</div>
+                        </td>
+                        <td>
+                            <div style="color:var(--text-muted); font-size:12px;">${f.sell_to_location} <span class="${sellBadge}">${f.sell_source.replace('🛡️','').replace('🌐','')}</span></div>
+                            <div class="price-text">${formatSilver(f.sell_price)} 🥈</div>
+                            <div class="${f.sell_age_mins <= 15 ? 'age-fresh' : 'age-text'}">Adet: <b style="color:#fff;">${f.sell_amount}</b> | ${f.sell_age_mins} dk önce</div>
+                        </td>
+                        <td class="profit-text">+${formatSilver(profitToShow)} 🥈</td>
+                        <td style="font-weight:bold;">%${f.profit_percentage.toFixed(1)}</td>
+                        <td>
+                            <button class="btn-consume" onclick="consumeFlip('${f.item_id}')" title="Bu eşyayı ekrandan gizle">
+                                <span class="material-icons" style="font-size:16px; vertical-align:middle;">lunch_dining</span> Tüket
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 🚨 YENİ FONKSİYON: Tırnak İşaretli İsimleri Hatasız Kopyalama
+        function copyItemName(btn) {
+            const name = btn.getAttribute('data-name');
+            navigator.clipboard.writeText(name).then(() => {
+                const icon = btn.querySelector('.material-icons');
+                icon.innerText = "check";
+                icon.style.color = "var(--profit-color)";
+                setTimeout(() => { icon.innerText = "content_copy"; icon.style.color = ""; }, 1000);
+            });
+        }
+
+        function consumeFlip(itemId) {
+            consumedItems.add(itemId);
+            const row = document.getElementById(`row-${itemId}`);
+            if (row) {
+                row.style.opacity = "0";
+                setTimeout(() => row.style.display = 'none', 300);
+            }
+        }
+
+        function sortBy(column) {
+            if (currentSortCol === column) {
+                currentSortDesc = !currentSortDesc; 
+            } else {
+                currentSortCol = column;
+                currentSortDesc = true; 
+            }
+            
+            document.querySelectorAll('th').forEach(th => th.classList.remove('active-sort'));
+            document.querySelectorAll('th .sort-icon').forEach(icon => icon.innerText = 'swap_vert');
+
+            const targetTh = event.currentTarget;
+            targetTh.classList.add('active-sort');
+            targetTh.querySelector('.sort-icon').innerText = currentSortDesc ? 'arrow_downward' : 'arrow_upward';
+
+            applyFilters();
+        }
+
+        document.querySelectorAll('input, select').forEach(el => {
+            if (el.id !== 'useAODP') { 
+                el.addEventListener('change', applyFilters);
+            }
+        });
+    </script>
+</body>
+</html>
