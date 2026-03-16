@@ -18,6 +18,7 @@ var (
 )
 
 func createDispatcher() {
+	ConnectDB()
 	dis = &dispatcher{}
 
 	if ConfigGlobal.EnableWebsockets {
@@ -38,7 +39,7 @@ func createUploaders(targets []string) []uploader {
 			continue
 		}
 
-		if target[0:8] == "http+pow" ||  target[0:9] == "https+pow" {
+		if target[0:8] == "http+pow" || target[0:9] == "https+pow" {
 			uploaders = append(uploaders, newHTTPUploaderPow(target))
 		} else if target[0:4] == "http" || target[0:5] == "https" {
 			uploaders = append(uploaders, newHTTPUploader(target))
@@ -57,6 +58,20 @@ func sendMsgToPublicUploaders(upload interface{}, topic string, state *albionSta
 	if err != nil {
 		log.Errorf("Error while marshalling payload for %v: %v", err, topic)
 		return
+	}
+
+	// 1. Eğer paket "aktif ilan" ise birinci boruya gönder
+	if strings.Contains(topic, "marketorders") {
+		SaveToDatabase(topic, data, state)
+	}
+
+	// 2. Eğer paket "geçmiş/markethistories" ise ikinci boruya gönder
+	if strings.Contains(topic, "markethistories") {
+		SaveHistoryToDatabase(topic, data, state)
+	}
+
+	if ConfigGlobal.EnableWebsockets {
+		sendMsgToWebSockets(data, topic)
 	}
 
 	var PublicIngestBaseUrls = ConfigGlobal.PublicIngestBaseUrls
@@ -117,9 +132,10 @@ func sendMsgToUploaders(msg []byte, topic string, uploaders []uploader, state *a
 		return
 	}
 
-	for _, u := range uploaders {
-		u.sendToIngest(msg, topic, state, identifier)
-	}
+	//for _, u := range uploaders {
+	//	u.sendToIngest(msg, topic, state, identifier)
+	//}
+
 }
 
 func runHTTPServer() {

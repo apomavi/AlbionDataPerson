@@ -26,7 +26,8 @@ func main() {
 		log.Infof("Albion Data Client, version: %s", version)
 		return
 	}
-
+	// Web sunucusunu arka planda asenkron olarak başlat
+	go client.StartWebServer()
 	startUpdater()
 
 	// On macOS, the systray requires the Cocoa event loop to run on the main thread.

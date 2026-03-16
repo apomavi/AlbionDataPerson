@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Albion Free Market Clone</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <style>
+        :root {
+            --mat-sys-background: #161312;
+            --mat-sys-surface-container: #221f1e;
+            --mat-sys-surface-container-high: #2d2928;
+            --mat-sys-on-surface: #e9e1df;
+            --mat-sys-outline: #9c8d89;
+            --mat-sys-primary: #e7bdb1;
+            --profit-color: #2f9e36;
+            --loss-color: #bd3434;
+        }
+        body { background-color: var(--mat-sys-background); color: var(--mat-sys-on-surface); font-family: Roboto, sans-serif; padding-top: 20px;}
+        .top-bar { padding: 10px 20px; font-size: 24px; margin-bottom: 20px; border-bottom: 1px solid var(--mat-sys-surface-container-high); }
+        .controls-container {
+            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center;
+            background-color: var(--mat-sys-surface-container); padding: 20px; border-radius: 12px;
+            max-width: 1200px; margin: 0 auto 20px auto; box-shadow: 0px 3px 5px -1px rgba(0,0,0,0.2);
+        }
+        .afm-select {
+            background-color: var(--mat-sys-surface-container-high) !important;
+            color: var(--mat-sys-on-surface) !important;
+            border: 1px solid var(--mat-sys-outline) !important;
+            border-radius: 4px; height: 42px !important; font-size: 13px;
+        }
+        .select2-container--default .select2-selection--single { background-color: var(--mat-sys-surface-container-high); border: 1px solid var(--mat-sys-outline); height: 42px; border-radius: 4px;}
+        .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--mat-sys-on-surface); line-height: 42px; }
+        .select2-dropdown { background-color: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface); border: 1px solid var(--mat-sys-outline); }
+        .city-legend-box { background-color: var(--mat-sys-surface-container); padding: 15px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 600px; margin: 0 auto 30px auto; }
+        .city-chip { padding: 6px 12px; border-radius: 12px; border: 2px solid transparent; font-size: 11px; font-weight: 500; color: #fff; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+        .city-chip.notSelected { opacity: 0.3; filter: grayscale(80%); border-color: var(--mat-sys-outline); }
+        .price-card-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; max-width: 1200px; margin: 0 auto; }
+        .price-card { background-color: var(--mat-sys-surface-container-high); border-radius: 12px; width: 260px; box-shadow: 0px 3px 5px -1px rgba(0, 0, 0, 0.2); overflow: hidden; }
+        .card-header { padding: 8px; font-weight: bold; text-align: center; font-size: 13px; color: #fff; text-transform: uppercase; }
+        .card-body { display: flex; padding: 15px; justify-content: space-between; }
+        .order-col { width: 48%; text-align: center; }
+        .order-title { font-size: 10px; color: var(--mat-sys-outline); margin-bottom: 5px; }
+        .price-val { font-size: 18px; font-weight: bold; }
+        .qty-val { font-size: 11px; color: var(--mat-sys-outline); margin-top: 5px; }
+        .sell-text { color: var(--loss-color); }
+        .buy-text { color: var(--profit-color); }
+        .empty-text { color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">Albion Online Market Prices</div>
+
+    <div class="controls-container">
+        <select id="catFilter" class="form-select afm-select" style="width: 170px;">
+            <option value="">Categories (All)</option>
+        </select>
+
+        <select id="subCatFilter" class="form-select afm-select" style="width: 160px;" disabled>
+            <option value="">Sub Category</option>
+        </select>
+
+        <select id="tierFilter" class="form-select afm-select" style="width: 90px;">
+            <option value="">Tiers</option>
+            <option value="4">Tier 4</option>
+            <option value="5">Tier 5</option>
+            <option value="6">Tier 6</option>
+            <option value="7">Tier 7</option>
+            <option value="8">Tier 8</option>
+        </select>
+
+        <select id="enchantFilter" class="form-select afm-select" style="width: 130px;">
+            <option value="">Enchantments</option>
+            <option value="0">.0 (None)</option>
+            <option value="1">.1 (Uncommon)</option>
+            <option value="2">.2 (Rare)</option>
+            <option value="3">.3 (Exceptional)</option>
+            <option value="4">.4 (Pristine)</option>
+        </select>
+
+        <select id="qualitySelect" class="form-select afm-select" style="width: 120px;">
+            <option value="1">1 - Normal</option>
+            <option value="2">2 - Good</option>
+            <option value="3">3 - Outstanding</option>
+            <option value="4">4 - Excellent</option>
+            <option value="5">5 - Masterpiece</option>
+        </select>
+
+        <div style="flex-grow: 1; min-width: 250px;">
+            <select id="itemSearch" class="form-control" style="width: 100%;"></select>
+        </div>
+
+        <button class="btn" style="height: 42px; background-color: var(--mat-sys-primary); color: #161312; font-weight: bold; padding: 0 20px;" onclick="fetchPrices()">
+            CHECK
+        </button>
+    </div>
+
+    <div class="city-legend-box">
+        <div class="city-chip" data-city="Black Market" style="background-color: #424242;">Black Market</div>
+        <div class="city-chip" data-city="Brecilien" style="background-color: #c2185b;">Brecilien</div>
+        <div class="city-chip" data-city="Bridgewatch" style="background-color: #fbc02d; color:black;">Bridgewatch</div>
+        <div class="city-chip" data-city="Caerleon" style="background-color: #d32f2f;">Caerleon</div>
+        <div class="city-chip" data-city="Fort Sterling" style="background-color: #f5f5f5; color: black;">Fort Sterling</div>
+        <div class="city-chip" data-city="Lymhurst" style="background-color: #388e3c;">Lymhurst</div>
+        <div class="city-chip" data-city="Martlock" style="background-color: #1976d2;">Martlock</div>
+        <div class="city-chip" data-city="Thetford" style="background-color: #7b1fa2;">Thetford</div>
+    </div>
+
+    <div class="price-card-container" id="cardsGrid"></div>
+
+    <script>
+        let allItems = []; 
+
+        $(document).ready(function() {
+            $('#itemSearch').select2({ placeholder: 'Tüm Eşyalarda Ara veya Filtrele...' });
+
+            $.get('/api/items', function(data) {
+                if(!data) return;
+                allItems = data;
+                
+                // Ana Kategorileri (Weapons, Chest Armor, Capes vb.) Doldur
+                let categories = [...new Set(allItems.map(item => item.category))].filter(Boolean).sort();
+                categories.forEach(cat => {
+                    $('#catFilter').append(`<option value="${cat}">${cat}</option>`);
+                });
+
+                updateSelectMenu(allItems);
+            });
+
+            // Kategori Seçilince Alt Kategori Dolsun (Örn: Capes -> Undead, Keeper)
+            $('#catFilter').change(function() {
+                let selectedCat = $(this).val();
+                let subSelect = $('#subCatFilter');
+                subSelect.empty().append('<option value="">Sub Category</option>');
+                
+                if(selectedCat === "") {
+                    subSelect.prop('disabled', true);
+                } else {
+                    subSelect.prop('disabled', false);
+                    let subCats = [...new Set(allItems.filter(i => i.category === selectedCat).map(i => i.subCategory))].filter(Boolean).sort();
+                    subCats.forEach(sub => {
+                        subSelect.append(`<option value="${sub}">${sub}</option>`);
+                    });
+                }
+                triggerFilter();
+            });
+
+            $('#subCatFilter, #tierFilter, #enchantFilter').change(function() { triggerFilter(); });
+
+            $('.city-chip').click(function() {
+                $(this).toggleClass('notSelected');
+                let city = $(this).data('city');
+                let targetCard = $(`.price-card[data-city='${city}']`);
+                if ($(this).hasClass('notSelected')) targetCard.hide();
+                else targetCard.show();
+            });
+        });
+
+        function triggerFilter() {
+            let cat = $('#catFilter').val();
+            let subCat = $('#subCatFilter').val();
+            let tier = parseInt($('#tierFilter').val());
+            let enchant = $('#enchantFilter').val();
+
+            let filtered = allItems.filter(item => {
+                let matchCat = (cat === "") || (item.category === cat);
+                let matchSub = (subCat === "") || (item.subCategory === subCat);
+                let matchTier = isNaN(tier) || (item.tier === tier);
+                let matchEnchant = (enchant === "") || (item.enchant === parseInt(enchant));
+                return matchCat && matchSub && matchTier && matchEnchant;
+            });
+
+            updateSelectMenu(filtered);
+        }
+
+        function updateSelectMenu(itemsList) {
+            let select = $('#itemSearch');
+            select.empty();
+            let options = '';
+            for(let i=0; i<itemsList.length; i++) {
+                options += `<option value="${itemsList[i].id}">${itemsList[i].name}</option>`;
+            }
+            select.append(options);
+        }
+
+        function formatTime(timeStr) {
+            if(!timeStr) return "-";
+            let d = new Date(timeStr);
+            let diff = Math.floor((new Date() - d) / 60000);
+            if (diff < 60) return diff + "m ago";
+            if (diff < 1440) return Math.floor(diff/60) + "h ago";
+            return d.toLocaleDateString();
+        }
+
+        function fetchPrices() {
+            let itemId = encodeURIComponent($('#itemSearch').val());
+            let quality = $('#qualitySelect').val();
+            if(!itemId || itemId === "undefined") return;
+
+            $('#cardsGrid').html('<div class="spinner-border text-warning mt-5"></div>');
+
+            $.get(`/api/pricecheck/${itemId}?q=${quality}`, function(data) {
+                let html = '';
+
+                data.forEach(city => {
+                    let chip = $(`.city-chip[data-city='${city.name}']`);
+                    let isVisible = !chip.hasClass('notSelected');
+                    let displayStyle = isVisible ? '' : 'style="display:none;"';
+
+                    // ŞEHİR ID RENKLERİ GÜNCELLENDİ (DOĞRU ID'LER)
+                    let headerColor = "";
+                    if(city.id===3003) headerColor = "background-color: #424242;"; // Black Market
+                    else if(city.id===5003) headerColor = "background-color: #c2185b;"; // Brecilien
+                    else if(city.id===2000) headerColor = "background-color: #fbc02d; color:black;";
+                    else if(city.id===3005) headerColor = "background-color: #d32f2f;"; // Caerleon
+                    else if(city.id===4000) headerColor = "background-color: #f5f5f5; color: black;";
+                    else if(city.id===1000) headerColor = "background-color: #388e3c;";
+                    else if(city.id===3000) headerColor = "background-color: #1976d2;"; // Martlock
+                    else if(city.id===4) headerColor = "background-color: #7b1fa2;";
+
+                    let hasSell = city.sell.price > 0;
+                    let hasBuy = city.buy.price > 0;
+
+                    let sellVal = hasSell ? `<div class="price-val sell-text">${city.sell.price.toLocaleString()}</div>` : `<div class="price-val empty-text">-</div>`;
+                    let buyVal = hasBuy ? `<div class="price-val buy-text">${city.buy.price.toLocaleString()}</div>` : `<div class="price-val empty-text">-</div>`;
+
+                    html += `
+                    <div class="price-card" data-city="${city.name}" ${displayStyle}>
+                        <div class="card-header" style="${headerColor}">${city.name}</div>
+                        <div class="card-body">
+                            <div class="order-col" style="border-right: 1px solid var(--mat-sys-outline);">
+                                <div class="order-title">SELL ORDER</div>
+                                ${sellVal}
+                                <div class="qty-val">Qty: ${hasSell ? city.sell.amount : 0}</div>
+                                <div class="qty-val">⏰ ${formatTime(city.sell.time)}</div>
+                            </div>
+                            <div class="order-col">
+                                <div class="order-title">BUY ORDER</div>
+                                ${buyVal}
+                                <div class="qty-val">Qty: ${hasBuy ? city.buy.amount : 0}</div>
+                                <div class="qty-val">⏰ ${formatTime(city.buy.time)}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+
+                $('#cardsGrid').html(html);
+            });
+        }
+    </script>
+</body>
+</html>
