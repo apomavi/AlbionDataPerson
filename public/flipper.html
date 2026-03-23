@@ -68,6 +68,19 @@
         </button>
 
         <div class="control-group">
+            <label style="color: #ffb2bf; font-weight: bold;">Satın Alınacak Şehir</label>
+            <select id="buyCityFilter" style="width: 140px; border-color: #a23955;">
+                <option value="Hepsi">Tüm Şehirler</option>
+                <option value="Lymhurst">Lymhurst</option>
+                <option value="Fort Sterling">Fort Sterling</option>
+                <option value="Martlock">Martlock</option>
+                <option value="Bridgewatch">Bridgewatch</option>
+                <option value="Thetford">Thetford</option>
+                <option value="Caerleon">Caerleon</option>
+            </select>
+        </div>
+
+        <div class="control-group">
             <label>Tiers</label>
             <select id="filterTiers" multiple size="2" style="height: 40px; width: 80px;">
                 <option value="4" selected>Tier 4</option>
@@ -139,7 +152,7 @@
     <script>
         let allFlips = []; 
         let consumedItems = new Set(); 
-        let currentSortCol = 'profit_premium'; // <-- DÜZELTİLDİ
+        let currentSortCol = 'profit_premium';
         let currentSortDesc = true;
 
         const formatSilver = (num) => new Intl.NumberFormat('en-US').format(num);
@@ -147,10 +160,13 @@
         async function fetchFlips() {
             document.getElementById('flip-results').innerHTML = '';
             document.getElementById('loader').style.display = 'block';
+            
             const useAODP = document.getElementById('useAODP').checked;
+            const buyCity = document.getElementById('buyCityFilter').value; // 🚨 YENİ EKLENEN
 
             try {
-                const response = await fetch(`/api/flipper?use_aodp=${useAODP}`);
+                // 🚨 YENİ EKLENEN: Şehir filtresini de sunucuya gönderiyoruz
+                const response = await fetch(`/api/flipper?use_aodp=${useAODP}&city_filter=${encodeURIComponent(buyCity)}`);
                 allFlips = await response.json();
                 document.getElementById('loader').style.display = 'none';
                 applyFilters(); 
@@ -214,8 +230,6 @@
                 const buyBadge = f.buy_source.includes('LOCAL') ? 'badge-local' : 'badge-aodp';
                 const sellBadge = f.sell_source.includes('LOCAL') ? 'badge-local' : 'badge-aodp';
                 const profitToShow = showNonPremium ? f.profit_normal : f.profit_premium;
-                
-                // 🚨 DÜZELTME: Enchant seviyesini düzgün gösterme (Örn: 5 veya 5.2)
                 const tierDisplay = f.enchant > 0 ? `${f.tier}.${f.enchant}` : `${f.tier}`;
 
                 tbody.innerHTML += `
@@ -251,7 +265,6 @@
             });
         }
 
-        // 🚨 YENİ FONKSİYON: Tırnak İşaretli İsimleri Hatasız Kopyalama
         function copyItemName(btn) {
             const name = btn.getAttribute('data-name');
             navigator.clipboard.writeText(name).then(() => {
@@ -290,10 +303,11 @@
         }
 
         document.querySelectorAll('input, select').forEach(el => {
-            if (el.id !== 'useAODP') { 
+            if (el.id !== 'useAODP' && el.id !== 'buyCityFilter') { 
                 el.addEventListener('change', applyFilters);
             }
         });
+        
     </script>
 </body>
 </html>
