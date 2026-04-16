@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ao-data/albiondata-client/custom/bridge"
 	"github.com/ao-data/albiondata-client/lib"
 	"github.com/ao-data/albiondata-client/log"
 	"github.com/mitchellh/mapstructure"
@@ -55,7 +56,6 @@ func decodeRequest(params map[uint8]interface{}) (operation operation, err error
 		operation = &operationAuctionGetItemAverageStats{}
 	case opGetClusterMapInfo:
 		operation = &operationGetClusterMapInfo{}
-	// case opGoldMarketGetAverageInfo:
 	case opGoldMarketGetAverageInfo:
 		operation = &operationGoldMarketGetAverageInfo{}
 	case opRealEstateGetAuctionData:
@@ -67,7 +67,6 @@ func decodeRequest(params map[uint8]interface{}) (operation operation, err error
 	}
 
 	err = decodeParams(params, operation)
-
 	return operation, err
 }
 
@@ -77,7 +76,7 @@ func decodeResponse(params map[uint8]interface{}) (operation operation, err erro
 		return nil, nil
 	}
 
-	// log.Infof("decodeResponse: %v, params: %v", code, params)
+	bridge.RunDecodedResponse(code, params)
 
 	switch OperationType(code) {
 	case opJoin:
@@ -98,7 +97,6 @@ func decodeResponse(params map[uint8]interface{}) (operation operation, err erro
 		operation = &operationReadMail{}
 	case opGetClusterMapInfo:
 		operation = &operationGetClusterMapInfoResponse{}
-	// case opGoldMarketGetAverageInfo:
 	case opGoldMarketGetAverageInfo:
 		operation = &operationGoldMarketGetAverageInfoResponse{}
 	case opRealEstateGetAuctionData:
@@ -119,7 +117,6 @@ func decodeResponse(params map[uint8]interface{}) (operation operation, err erro
 	}
 
 	err = decodeParams(params, operation)
-
 	return operation, err
 }
 
@@ -130,15 +127,9 @@ func decodeEvent(params map[uint8]interface{}) (event operation, err error) {
 		return nil, nil
 	}
 
-	// log.Infof("decodeEvent: %v, params: %v", eventType, params)
+	bridge.RunDecodedEvent(eventType, params)
 
 	switch EventType(eventType) {
-	// case evRespawn: //TODO: confirm this eventCode (old 77)
-	// 	event = &eventPlayerOnlineStatus{}
-	// case evCharacterStats: //TODO: confirm this eventCode (old 114)
-	// 	event = &eventSkillData{}
-	//case evRedZonePlayerNotification:
-	//	event = &eventRedZonePlayerNotification{}
 	case evRedZoneWorldMapEvent:
 		event = &eventRedZoneWorldMapEvent{}
 	default:
@@ -146,7 +137,6 @@ func decodeEvent(params map[uint8]interface{}) (event operation, err error) {
 	}
 
 	err = decodeParams(params, event)
-
 	return event, err
 }
 
@@ -154,13 +144,11 @@ func decodeParams(params map[uint8]interface{}, operation operation) error {
 	convertGameObjects := func(from reflect.Type, to reflect.Type, v interface{}) (interface{}, error) {
 		if from == reflect.TypeOf([]int8{}) && to == reflect.TypeOf(lib.CharacterID("")) {
 			log.Debug("Parsing character ID from mixed-endian UUID (int8)")
-
 			return decodeCharacterID(v.([]int8)), nil
 		}
 
 		if from == reflect.TypeOf([]uint8{}) && to == reflect.TypeOf(lib.CharacterID("")) {
 			log.Debug("Parsing character ID from mixed-endian UUID (uint8)")
-
 			return decodeCharacterIDFromBytes(v.([]uint8)), nil
 		}
 
@@ -177,17 +165,11 @@ func decodeParams(params map[uint8]interface{}, operation operation) error {
 		return err
 	}
 
-	// Decided that the maps were easier to work with in most places with uint8 keys
-	// Therefore we have to convert to a string map in order for the decode to work here
-	// Should be negligible performance loss
 	stringMap := make(map[string]interface{})
 	for k, v := range params {
 		stringMap[strconv.Itoa(int(k))] = v
 	}
-
-	err = decoder.Decode(stringMap)
-
-	return err
+	return decoder.Decode(stringMap)
 }
 
 func decodeCharacterIDFromBytes(array []uint8) lib.CharacterID {
@@ -213,29 +195,14 @@ func decodeCharacterIDFromBytes(array []uint8) lib.CharacterID {
 }
 
 func decodeCharacterID(array []int8) lib.CharacterID {
-	/* So this is a UUID, which is stored in a 'mixed-endian' format.
-	The first three components are stored in little-endian, the rest in big-endian.
-	See https://en.wikipedia.org/wiki/Universally_unique_identifier#Encoding.
-	By default, our int array is read as big-endian, so we need to swap the first
-	three components of the UUID
-	*/
 	b := make([]byte, len(array))
-
-	// First, convert to byte
 	for k, v := range array {
 		b[k] = byte(v)
 	}
-
-	// swap first component
 	b[0], b[1], b[2], b[3] = b[3], b[2], b[1], b[0]
-
-	// swap second component
 	b[4], b[5] = b[5], b[4]
-
-	// swap third component
 	b[6], b[7] = b[7], b[6]
 
-	// format it UUID-style
 	var buf [36]byte
 	hex.Encode(buf[:], b[:4])
 	buf[8] = '-'
@@ -246,7 +213,6 @@ func decodeCharacterID(array []int8) lib.CharacterID {
 	hex.Encode(buf[19:23], b[8:10])
 	buf[23] = '-'
 	hex.Encode(buf[24:], b[10:])
-
 	return lib.CharacterID(buf[:])
 }
 
@@ -258,7 +224,6 @@ func normalizeOperationCode(code uint16) uint16 {
 	if isKnownOperationCode(swapped) {
 		return swapped
 	}
-	// Common post-update artifact: values like 0xDA00 where real code is 0x00DA.
 	if code > 0x00FF && code&0x00FF == 0 {
 		return code >> 8
 	}
@@ -362,7 +327,7 @@ func extractLocationLikeFromText(text string) (string, bool) {
 	if normalized := normalizeLocationID(text); normalized != "" {
 		return normalized, true
 	}
-	// Split on non-printable runes and scan printable chunks.
+
 	var chunk strings.Builder
 	flush := func() (string, bool) {
 		if chunk.Len() == 0 {

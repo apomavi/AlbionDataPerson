@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ao-data/albiondata-client/client"
+	_ "github.com/ao-data/albiondata-client/custom"
+	"github.com/ao-data/albiondata-client/custom/bridge"
 	"github.com/ao-data/albiondata-client/log"
 	"github.com/ao-data/albiondata-client/systray"
 
@@ -27,7 +29,7 @@ func main() {
 		return
 	}
 	// Web sunucusunu arka planda asenkron olarak başlat
-	go client.StartWebServer()
+	go bridge.StartBackgroundServices()
 	startUpdater()
 
 	// log.Infof("Albion Data Client, version: %s", version)

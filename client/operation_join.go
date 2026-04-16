@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/ao-data/albiondata-client/custom/bridge"
 	"github.com/ao-data/albiondata-client/lib"
 	"github.com/ao-data/albiondata-client/log"
 )
@@ -27,6 +28,7 @@ func (op operationJoinResponse) Process(state *albionState) {
 	if location != "" {
 		log.Infof("Updating player location to %v.", location)
 		state.LocationId = location
+		bridge.RecordCurrentMap(location)
 	} else {
 		log.Debugf("Ignoring implausible join location value: %q", op.Location)
 	}
@@ -40,4 +42,12 @@ func (op operationJoinResponse) Process(state *albionState) {
 		log.Infof("Updating player to %v.", op.CharacterName)
 	}
 	state.CharacterName = op.CharacterName
+
+	bridge.RunJoinStateUpdated(bridge.JoinStateData{
+		CharacterID:   string(op.CharacterID),
+		CharacterName: op.CharacterName,
+		GuildID:       string(op.GuildID),
+		GuildName:     op.GuildName,
+		LocationID:    state.LocationId,
+	})
 }

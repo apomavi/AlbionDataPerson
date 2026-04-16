@@ -300,4 +300,3 @@ func normalizeLocationID(v string) string {
 	}
 	return ""
 }
-

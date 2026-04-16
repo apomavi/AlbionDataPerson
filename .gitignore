@@ -17,5 +17,7 @@ buildall.sh
 run.sh
 *.log
 *.log.*
+.gocache/
+.gomodcache/
 
 

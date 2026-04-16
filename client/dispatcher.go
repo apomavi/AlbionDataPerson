@@ -3,9 +3,9 @@ package client
 import (
 	"encoding/json"
 	"net/http"
-
 	"strings"
 
+	"github.com/ao-data/albiondata-client/custom/bridge"
 	"github.com/ao-data/albiondata-client/lib"
 	"github.com/ao-data/albiondata-client/log"
 )
@@ -18,7 +18,6 @@ var (
 )
 
 func createDispatcher() {
-	ConnectDB()
 	dis = &dispatcher{}
 
 	if ConfigGlobal.EnableWebsockets {
@@ -60,19 +59,15 @@ func sendMsgToPublicUploaders(upload interface{}, topic string, state *albionSta
 		return
 	}
 
-	// 1. Eğer paket "aktif ilan" ise birinci boruya gönder
-	if strings.Contains(topic, "marketorders") {
-		SaveToDatabase(topic, data, state)
-	}
-
-	// 2. Eğer paket "geçmiş/markethistories" ise ikinci boruya gönder
-	if strings.Contains(topic, "markethistories") {
-		SaveHistoryToDatabase(topic, data, state)
-	}
-
-	if ConfigGlobal.EnableWebsockets {
-		sendMsgToWebSockets(data, topic)
-	}
+	bridge.RunPublicUpload(topic, data, bridge.UploadContext{
+		CharacterID:         string(state.CharacterId),
+		CharacterName:       state.CharacterName,
+		LocationID:          state.LocationId,
+		CurrentMap:          bridge.CurrentMap(),
+		AODataServerID:      state.AODataServerID,
+		AODataIngestBaseURL: state.AODataIngestBaseURL,
+		GameServerIP:        state.GameServerIP,
+	})
 
 	var PublicIngestBaseUrls = ConfigGlobal.PublicIngestBaseUrls
 	// http+pow://albion-online-data.com is used as a magic placeholder for every realm there is
@@ -132,10 +127,9 @@ func sendMsgToUploaders(msg []byte, topic string, uploaders []uploader, state *a
 		return
 	}
 
-	//for _, u := range uploaders {
-	//	u.sendToIngest(msg, topic, state, identifier)
-	//}
-
+	for _, u := range uploaders {
+		u.sendToIngest(msg, topic, state, identifier)
+	}
 }
 
 func runHTTPServer() {

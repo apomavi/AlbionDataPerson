@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/ao-data/albiondata-client/custom/bridge"
 	"github.com/ao-data/albiondata-client/lib"
 	"github.com/ao-data/albiondata-client/log"
 	uuid "github.com/nu7hatch/gouuid"
@@ -27,6 +28,7 @@ func (op operationGoldMarketGetAverageInfoResponse) Process(state *albionState) 
 	}
 
 	identifier, _ := uuid.NewV4()
+	bridge.RunGoldPrices(op.GoldPrices, op.TimeStamps)
 	log.Infof("Sending gold prices to ingest (Identifier: %s)", identifier)
 	sendMsgToPublicUploaders(upload, lib.NatsGoldPricesIngest, state, identifier.String())
 }
