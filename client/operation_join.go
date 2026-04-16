@@ -1,7 +1,6 @@
 package client
 
 import (
-
 	"github.com/ao-data/albiondata-client/lib"
 	"github.com/ao-data/albiondata-client/log"
 )
@@ -10,8 +9,8 @@ type operationJoinResponse struct {
 	CharacterID   lib.CharacterID `mapstructure:"1"`
 	CharacterName string          `mapstructure:"2"`
 	Location      string          `mapstructure:"8"`
-	GuildID       lib.CharacterID `mapstructure:"53"`
-	GuildName     string          `mapstructure:"57"`
+	GuildID       lib.CharacterID `mapstructure:"56"`
+	GuildName     string          `mapstructure:"58"`
 }
 
 //CharacterPartsJSON string          `mapstructure:"6"`
@@ -24,8 +23,13 @@ func (op operationJoinResponse) Process(state *albionState) {
 	// of SetServerID() incase the player switched servers
 	state.AODataServerID = 0
 
-	log.Infof("Updating player location to %v.", op.Location)
-	state.LocationId = op.Location
+	location := normalizeLocationID(op.Location)
+	if location != "" {
+		log.Infof("Updating player location to %v.", location)
+		state.LocationId = location
+	} else {
+		log.Debugf("Ignoring implausible join location value: %q", op.Location)
+	}
 
 	if state.CharacterId != op.CharacterID {
 		log.Infof("Updating player ID to %v.", op.CharacterID)

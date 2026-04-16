@@ -30,6 +30,9 @@ func main() {
 	go client.StartWebServer()
 	startUpdater()
 
+	// log.Infof("Albion Data Client, version: %s", version)
+	// log.Info("Client is currently broken after today's (2025-04-13) update. We are working on the issue. An update will be released when it is fixed. Please see https://www.albion-online-data.com/client/ for updates.")
+
 	// On macOS, the systray requires the Cocoa event loop to run on the main thread.
 	// So we run the client in a goroutine and systray on the main thread.
 	// On other platforms, we do the opposite for backward compatibility.
