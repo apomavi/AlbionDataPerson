@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"net/http"
+
 	"strings"
 
 	"github.com/ao-data/albiondata-client/custom/bridge"
@@ -38,7 +39,7 @@ func createUploaders(targets []string) []uploader {
 			continue
 		}
 
-		if target[0:8] == "http+pow" || target[0:9] == "https+pow" {
+		if target[0:8] == "http+pow" ||  target[0:9] == "https+pow" {
 			uploaders = append(uploaders, newHTTPUploaderPow(target))
 		} else if target[0:4] == "http" || target[0:5] == "https" {
 			uploaders = append(uploaders, newHTTPUploader(target))

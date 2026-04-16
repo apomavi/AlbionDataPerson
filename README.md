@@ -5,6 +5,44 @@
 Distributed client for the [Albion Online Data](https://www.albion-online-data.com/)
 project.
 
+## Personal Fork Workflow
+This repository is used as a personal fork that still tracks updates from the original `ao-data/albiondata-client` project.
+
+Main goals:
+- keep pulling upstream fixes from the original project
+- keep custom logic mostly inside `custom/`
+- keep core merge conflicts as small as possible
+
+### Start
+Run `baslat.bat`.
+
+It will ask which mode you want:
+- `1`: only your local/custom database
+- `2`: your local/custom database plus AODP upload
+
+In both modes, your custom database flow stays active.
+
+### Update From Original Repo
+Run `guncelle.bat`.
+
+That script:
+1. fetches `upstream`
+2. merges `upstream/master`
+3. runs a build check
+
+If it finishes successfully, start the app again with `baslat.bat`.
+
+### Custom Layer
+Heavy custom logic was moved under `custom/`.
+
+Only a few thin bridge calls remain in upstream core files such as:
+- `client/decode.go`
+- `client/dispatcher.go`
+- `client/operation_join.go`
+- `client/operation_gold_market_get_average_info.go`
+
+This is intentional and makes future upstream merges easier.
+
 A quick note on the legality of this application and if it
 violates the Terms and Conditions for Albion Online. Here is
 the response from SBI when asked if we are allowed to do

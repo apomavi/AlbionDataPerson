@@ -28,7 +28,6 @@ func main() {
 		log.Infof("Albion Data Client, version: %s", version)
 		return
 	}
-	// Web sunucusunu arka planda asenkron olarak başlat
 	go bridge.StartBackgroundServices()
 	startUpdater()
 
