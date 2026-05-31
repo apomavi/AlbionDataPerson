@@ -238,6 +238,7 @@ func StartWebServer() {
 	app.Use(cors.New())
 
 	SetupFlipperRoutes(app)
+	SetupCollectorRoutes(app)
 
 	app.Get("/api/items", func(c *fiber.Ctx) error { return c.JSON(ItemList) })
 

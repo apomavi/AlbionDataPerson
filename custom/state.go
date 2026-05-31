@@ -15,6 +15,8 @@ var (
 )
 
 func onJoinStateUpdated(data bridge.JoinStateData) {
+	emitCollectorJoinState(data)
+
 	if data.CharacterName != "" {
 		MyCharacterName = data.CharacterName
 	}

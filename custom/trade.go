@@ -271,6 +271,8 @@ func PrintTradeReceipt(tradeID string, session *TradeSession) {
 	log.Infof("%s", strings.Repeat("-", 60))
 
 	var v1DB, v2DB int64
+	localItems := make([]collectorTradeItem, 0, len(session.T1Items))
+	remoteItems := make([]collectorTradeItem, 0, len(session.T2Items))
 
 	type dbItem struct {
 		Owner string
@@ -291,6 +293,13 @@ func PrintTradeReceipt(tradeID string, session *TradeSession) {
 		name := getItemName(id)
 		log.Infof("  - %dx %s | 14d avg: %d", amt, name, p)
 		itemsToSave = append(itemsToSave, dbItem{Owner: session.T1Name, ID: id, Name: name, Amt: amt, Price: p})
+		localItems = append(localItems, collectorTradeItem{
+			ItemID:     id,
+			ItemName:   name,
+			Amount:     amt,
+			UnitPrice:  p,
+			TotalPrice: p * int64(amt),
+		})
 	}
 	log.Infof("  Silver: %d", session.T1Silver)
 	log.Infof("  Total : %d", v1DB+session.T1Silver)
@@ -306,6 +315,13 @@ func PrintTradeReceipt(tradeID string, session *TradeSession) {
 		name := getItemName(id)
 		log.Infof("  - %dx %s | 14d avg: %d", amt, name, p)
 		itemsToSave = append(itemsToSave, dbItem{Owner: session.T2Name, ID: id, Name: name, Amt: amt, Price: p})
+		remoteItems = append(remoteItems, collectorTradeItem{
+			ItemID:     id,
+			ItemName:   name,
+			Amount:     amt,
+			UnitPrice:  p,
+			TotalPrice: p * int64(amt),
+		})
 	}
 	log.Infof("  Silver: %d", session.T2Silver)
 	log.Infof("  Total : %d", v2DB+session.T2Silver)
@@ -324,6 +340,37 @@ func PrintTradeReceipt(tradeID string, session *TradeSession) {
 	default:
 		log.Infof("NET RESULT: EVEN")
 	}
+
+	emitCollectorTradeCompleted(
+		collectorTradeCompletedPayload{
+			SessionID:   tradeID,
+			Location:    readableLocation,
+			CompletedAt: currentTimeUTC,
+			LocalParty: collectorTradeParty{
+				Name:      session.T1Name,
+				GuildName: session.T1Guild,
+				Silver:    session.T1Silver,
+				Total:     v1DB + session.T1Silver,
+				Items:     localItems,
+			},
+			RemoteParty: collectorTradeParty{
+				Name:      session.T2Name,
+				GuildName: session.T2Guild,
+				Silver:    session.T2Silver,
+				Total:     v2DB + session.T2Silver,
+				Items:     remoteItems,
+			},
+			NetProfit: profit,
+		},
+		collectorActor{
+			CharacterName: session.T1Name,
+		},
+		collectorContext{
+			LocationID: CurrentMap,
+			CurrentMap: readableLocation,
+			GuildName:  session.T1Guild,
+		},
+	)
 
 	if db == nil {
 		log.Infof("%s\n", strings.Repeat("=", 60))

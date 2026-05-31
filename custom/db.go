@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ao-data/albiondata-client/client"
 	"github.com/ao-data/albiondata-client/custom/bridge"
+	applog "github.com/ao-data/albiondata-client/log"
 	_ "github.com/lib/pq"
 )
 
@@ -27,11 +29,22 @@ func init() {
 }
 
 func startCustomServices() {
+	startCollectorService()
+	if !client.ConfigGlobal.EnableEmbeddedCustom {
+		applog.Info("Embedded custom backend is disabled. Client will run in collector-only mode.")
+		return
+	}
 	ConnectDB()
+	startCollectorProcessor()
 	StartWebServer()
 }
 
 func handleCustomPublicUpload(topic string, jsonData []byte, ctx bridge.UploadContext) {
+	emitCollectorPublicUpload(topic, jsonData, ctx)
+	if !client.ConfigGlobal.EnableEmbeddedCustom || db == nil {
+		return
+	}
+
 	if strings.Contains(topic, "marketorders") {
 		SaveToDatabase(topic, jsonData, ctx)
 	}
@@ -53,6 +66,77 @@ func ConnectDB() {
 		"ALTER TABLE market_orders ADD COLUMN IF NOT EXISTS tier TEXT;",
 		"ALTER TABLE market_history ADD COLUMN IF NOT EXISTS item_name TEXT;",
 		"ALTER TABLE market_history ADD COLUMN IF NOT EXISTS tier TEXT;",
+		`CREATE TABLE IF NOT EXISTS collector_events (
+			event_id TEXT PRIMARY KEY,
+			schema_version INTEGER NOT NULL,
+			event_type TEXT NOT NULL,
+			occurred_at TIMESTAMPTZ NOT NULL,
+			actor_character_id TEXT,
+			actor_character_name TEXT,
+			context_topic TEXT,
+			context_location_id TEXT,
+			context_current_map TEXT,
+			context_guild_id TEXT,
+			context_guild_name TEXT,
+			context_game_server_ip TEXT,
+			context_aodata_server_id INTEGER,
+			context_aodata_ingest_base_url TEXT,
+			payload JSONB NOT NULL,
+			raw_event JSONB NOT NULL,
+			processor_status TEXT NOT NULL DEFAULT 'pending',
+			processor_error TEXT,
+			processed_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE IF NOT EXISTS collector_player_state (
+			character_id TEXT PRIMARY KEY,
+			character_name TEXT,
+			guild_id TEXT,
+			guild_name TEXT,
+			location_id TEXT,
+			last_event_id TEXT NOT NULL,
+			updated_at TIMESTAMPTZ NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS collector_market_events (
+			event_id TEXT PRIMARY KEY,
+			event_type TEXT NOT NULL,
+			actor_character_id TEXT,
+			actor_character_name TEXT,
+			location_id TEXT,
+			topic TEXT,
+			payload JSONB NOT NULL,
+			occurred_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE IF NOT EXISTS collector_trade_reports (
+			event_id TEXT PRIMARY KEY,
+			session_id TEXT NOT NULL,
+			location TEXT,
+			completed_at TIMESTAMPTZ NOT NULL,
+			actor_character_name TEXT,
+			local_party_name TEXT NOT NULL,
+			local_party_guild_name TEXT,
+			local_party_silver BIGINT NOT NULL,
+			local_party_total BIGINT NOT NULL,
+			remote_party_name TEXT NOT NULL,
+			remote_party_guild_name TEXT,
+			remote_party_silver BIGINT NOT NULL,
+			remote_party_total BIGINT NOT NULL,
+			net_profit BIGINT NOT NULL,
+			raw_payload JSONB NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE IF NOT EXISTS collector_trade_report_items (
+			event_id TEXT NOT NULL,
+			party_side TEXT NOT NULL,
+			item_id INTEGER NOT NULL,
+			item_name TEXT NOT NULL,
+			amount INTEGER NOT NULL,
+			unit_price BIGINT NOT NULL,
+			total_price BIGINT NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (event_id, party_side, item_id, item_name, amount)
+		);`,
 	}
 	for _, q := range setupQueries {
 		db.Exec(q)
@@ -74,7 +158,7 @@ func ConnectDB() {
 }
 
 func SaveToDatabase(topic string, jsonData []byte, ctx bridge.UploadContext) {
-	if !strings.Contains(topic, "marketorders") {
+	if db == nil || !strings.Contains(topic, "marketorders") {
 		return
 	}
 
@@ -131,7 +215,7 @@ func SaveToDatabase(topic string, jsonData []byte, ctx bridge.UploadContext) {
 }
 
 func SaveHistoryToDatabase(topic string, jsonData []byte, ctx bridge.UploadContext) {
-	if !strings.Contains(topic, "markethistories") {
+	if db == nil || !strings.Contains(topic, "markethistories") {
 		return
 	}
 

@@ -39,7 +39,7 @@ func createUploaders(targets []string) []uploader {
 			continue
 		}
 
-		if target[0:8] == "http+pow" ||  target[0:9] == "https+pow" {
+		if target[0:8] == "http+pow" || target[0:9] == "https+pow" {
 			uploaders = append(uploaders, newHTTPUploaderPow(target))
 		} else if target[0:4] == "http" || target[0:5] == "https" {
 			uploaders = append(uploaders, newHTTPUploader(target))
@@ -91,7 +91,6 @@ func sendMsgToPublicUploaders(upload interface{}, topic string, state *albionSta
 
 func sendMsgToPrivateUploaders(upload lib.PersonalizedUpload, topic string, state *albionState, identifier string) {
 	if ConfigGlobal.DisableUpload {
-		log.Info("Upload is disabled.")
 		return
 	}
 
@@ -124,7 +123,6 @@ func sendMsgToPrivateUploaders(upload lib.PersonalizedUpload, topic string, stat
 
 func sendMsgToUploaders(msg []byte, topic string, uploaders []uploader, state *albionState, identifier string) {
 	if ConfigGlobal.DisableUpload {
-		log.Info("Upload is disabled.")
 		return
 	}
 

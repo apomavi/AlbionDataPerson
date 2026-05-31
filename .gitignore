@@ -1,23 +1,64 @@
+# Editor / OS
 .idea/
-_vendor-[0-9]*
 .vscode/
+.DS_Store
+
+# Local config / secrets
+config.yaml
+.secrets
+.env
+.env.*
+!.env.example
+license.lic
+*.local
+
+# Logs
+*.log
+*.log.*
+albiondata-client-output.txt
+
+# Build artifacts / archives
 *.exe
 *.gz
 *.zip
 *.pcap
 *.gob
-scripts/albiondata-client
-albiondata-client-output.txt
-config.yaml
-.secrets
-.DS_Store
-act.sh
-albiondata-client*
-buildall.sh
-run.sh
-*.log
-*.log.*
+dist/
+out/
+coverage/
+**/dist/
+**/out/
+**/coverage/
+
+# Go caches / local binaries
 .gocache/
 .gomodcache/
+bin/
+scripts/albiondata-client
+albiondata-client*
+_vendor-[0-9]*
+
+# Node / Next.js generated files
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+.turbo/
+**/.turbo/
+.vercel/
+**/.vercel/
+
+# Local app data / databases
+data/
+**/data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Local helper scripts
+act.sh
+buildall.sh
+run.sh
 
 

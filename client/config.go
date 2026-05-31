@@ -46,6 +46,8 @@ func (w *ansiStripWriter) Write(p []byte) (n int, err error) {
 
 type config struct {
 	AllowedWSHosts                 []string
+	CollectorAuthToken             string
+	CollectorEndpoint              string
 	Debug                          bool
 	Trace                          bool
 	DebugEvents                    map[int]bool
@@ -56,6 +58,7 @@ type config struct {
 	DebugOperationsBlacklistString string
 	DebugIgnoreDecodingErrors      bool
 	DisableUpload                  bool
+	EnableEmbeddedCustom           bool
 	EnableWebsockets               bool
 	ListenDevices                  string
 	LogLevel                       string
@@ -201,6 +204,13 @@ func (config *config) setupCommonFlags() {
 		"If specified no attempts will be made to upload data to remote server.",
 	)
 
+	flag.BoolVar(
+		&config.EnableEmbeddedCustom,
+		"embedded-custom",
+		true,
+		"Run the embedded custom DB/web/processor services inside the client process.",
+	)
+
 	flag.StringVar(
 		&config.ListenDevices,
 		"l",
@@ -234,6 +244,20 @@ func (config *config) setupCommonFlags() {
 		"p",
 		"",
 		"Base URL to send PRIVATE data to, can be 'nats://', 'http://', 'https://' or 'noop' and can have multiple uploaders. Comma separated.",
+	)
+
+	flag.StringVar(
+		&config.CollectorEndpoint,
+		"collector-url",
+		"",
+		"Optional HTTP endpoint that receives normalized backend events from this client.",
+	)
+
+	flag.StringVar(
+		&config.CollectorAuthToken,
+		"collector-token",
+		"",
+		"Optional bearer token used when posting normalized backend events.",
 	)
 
 	flag.StringVar(

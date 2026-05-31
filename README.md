@@ -13,14 +13,93 @@ Main goals:
 - keep custom logic mostly inside `custom/`
 - keep core merge conflicts as small as possible
 
+## Current Monorepo Direction
+This repository is being shaped into three clear runtime spines while keeping the current system working:
+
+- `client`: game-facing collector
+- `backend`: standalone ingest, processor, and business backend
+- `web`: future user-facing frontend
+
+Shared client/backend event contracts now live under `contracts/`.
+
 ### Start
 Run `baslat.bat`.
 
 It will ask which mode you want:
 - `1`: only your local/custom database
 - `2`: your local/custom database plus AODP upload
+- `3`: collector-only mode, send events to the standalone backend
+- `4`: collector-only mode, send events to the standalone backend and AODP together
 
 In both modes, your custom database flow stays active.
+
+### Optional Collector Mode
+This fork can also post normalized gameplay events to your own backend API.
+
+Examples:
+- `albiondata-client.exe -collector-url http://localhost:9000/api/collector/events`
+- `albiondata-client.exe -collector-url https://your-domain/api/collector/events -collector-token YOUR_TOKEN`
+
+For local development with the built-in web server, you can point the client back to:
+- `http://localhost:8081/api/collector/events`
+
+Useful local inspection endpoints:
+- `GET /api/collector/health`
+- `GET /api/collector/events/recent?limit=25`
+- `GET /api/collector/processor/status`
+- `GET /api/collector/projections/player-state`
+- `GET /api/collector/projections/trades/recent?limit=25`
+
+Current normalized event coverage:
+- join/player state updates
+- market order snapshots
+- market history snapshots
+- gold price snapshots
+- completed trade reports
+
+This is the first step toward a hosted architecture where the client stays thin and your website/backend owns accounts, permissions, and product logic.
+
+### Standalone Backend
+There is now also a separate backend executable in this repo.
+
+Start it with:
+- `baslat-backend.bat`
+
+Or manually:
+- `go run ./cmd/albion-personal-backend --addr :8082`
+
+Then point the client collector to it:
+- `albiondata-client.exe -collector-url http://localhost:8082/api/collector/events`
+
+This means the project now supports two runtime roles:
+- client collector
+- standalone ingest/processor backend
+
+The backend also now exposes the first website-facing compatibility APIs:
+- `GET /api/items`
+- `GET /api/pricecheck/:item_id`
+- `GET /api/flipper`
+
+This lets the new `web/` frontend start talking to `backend/` directly while the old embedded Go website keeps working during migration.
+
+Current new frontend routes:
+- `/market`
+- `/flipper`
+- `/dashboard`
+
+Current private backend routes:
+- `POST /api/private/dev/bootstrap`
+- `GET /api/private/me`
+- `POST /api/private/me/profile`
+- `GET /api/private/dashboard`
+
+Collector ownership flow:
+- create a dev user from the new `/dashboard` page
+- copy that user's API token
+- start the client in mode `3` or `4`
+- when asked for `Collector kullanici tokeni`, paste that token
+
+When the token is provided, backend events are attached to that user instead of staying anonymous.
 
 ### Update From Original Repo
 Run `guncelle.bat`.
